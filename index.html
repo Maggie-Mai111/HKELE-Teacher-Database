@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HK-ELE Teacher-facing Vocabulary Database</title>
+
+  <!--
+    HK-ELE Teacher-facing Vocabulary Database demo webpage
+    ------------------------------------------------------
+    How to use:
+    1. Save this file as index.html.
+    2. Put it in your GitHub Pages repository.
+    3. Open the webpage and upload your Excel file, e.g. HKELE_teacher_facing_v4.xlsx.
+    4. The webpage reads the Excel file locally in the browser. The file is not uploaded to a server.
+
+    Optional future improvement:
+    If you want the Excel file to load automatically, place the Excel file in the same GitHub repo
+    and replace the file-upload logic with a fetch() call. For now, the upload box is safer and easier.
+  -->
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --blue: #1f4e79;
+      --light-blue: #eaf3fb;
+      --green: #e2f0d9;
+      --yellow: #fff2cc;
+      --purple: #eadcf8;
+      --orange: #fce4d6;
+      --grey: #f5f6f8;
+      --text: #1f2933;
+      --muted: #667085;
+      --border: #d0d7de;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: #f7f9fb;
+      line-height: 1.55;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1f4e79, #3b7ca6);
+      color: white;
+      padding: 46px 24px 38px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      letter-spacing: 0.2px;
+    }
+
+    header p {
+      margin: 0 auto;
+      max-width: 900px;
+      font-size: 17px;
+      opacity: 0.95;
+    }
+
+    nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 20px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    nav a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 999px;
+    }
+
+    nav a:hover {
+      background: var(--light-blue);
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    section {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    h2 {
+      color: var(--blue);
+      margin-top: 0;
+      font-size: 24px;
+    }
+
+    h3 {
+      color: #274c77;
+      margin-bottom: 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--grey);
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .card strong {
+      color: var(--blue);
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin: 2px 4px 2px 0;
+      background: var(--light-blue);
+      color: var(--blue);
+    }
+
+    .pill.green { background: var(--green); color: #386641; }
+    .pill.yellow { background: var(--yellow); color: #7a5b00; }
+    .pill.purple { background: var(--purple); color: #5b2a86; }
+    .pill.orange { background: var(--orange); color: #9a3412; }
+
+    .upload-box {
+      border: 2px dashed #9bb7ce;
+      border-radius: 16px;
+      padding: 22px;
+      text-align: center;
+      background: #f8fbff;
+    }
+
+    input[type="file"] {
+      margin: 12px 0;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .controls input,
+    .controls select {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: white;
+    }
+
+    .table-wrap {
+      max-height: 620px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: white;
+    }
+
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #eef6fc;
+      color: var(--blue);
+      z-index: 2;
+    }
+
+    tr:hover td {
+      background: #f9fafb;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .note {
+      background: #fff8e6;
+      border-left: 5px solid #f2b84b;
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: #5f4700;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 20px 40px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 800px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      header h1 {
+        font-size: 27px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>HK-ELE Teacher-facing Vocabulary Database</h1>
+    <p>
+      A practical vocabulary planning tool for Hong Kong teachers: combine local corpus evidence,
+      school-text exposure, external grade benchmarks, academic/subject list membership, and word-part information.
+    </p>
+  </header>
+
+  <nav>
+    <a href="#about">About</a>
+    <a href="#how-to-use">How teachers can use it</a>
+    <a href="#database">Explore database</a>
+    <a href="#columns">Column guide</a>
+    <a href="#notes">Notes</a>
+  </nav>
+
+  <main>
+    <section id="about">
+      <h2>About this database</h2>
+      <p>
+        This teacher-facing version of the HK-ELE vocabulary database is designed to support practical vocabulary
+        planning rather than replace teacher judgement. It helps teachers ask: Which words are worth teaching?
+        When might students have encountered them? Are they academically or subject relevant? What word-part
+        information can support instruction?
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <strong>Local frequency signal</strong><br />
+          <span class="pill green">HK Top 1K / 2K / 3K</span>
+          <p>Shows whether a word family is frequent in Hong Kong English evidence from ICE-HK and GloWbE-HK.</p>
+        </div>
+        <div class="card">
+          <strong>School exposure signal</strong><br />
+          <span class="pill">First seen grade</span>
+          <p>Shows when a word appears in Hong Kong textbook evidence, supporting grade-sensitive planning.</p>
+        </div>
+        <div class="card">
+          <strong>External benchmark</strong><br />
+          <span class="pill yellow">Grade 6–7</span>
+          <p>Converts VXGL values into readable grade labels. This is an external U.S. benchmark, not a Hong Kong grade level.</p>
+        </div>
+        <div class="card">
+          <strong>Teaching support</strong><br />
+          <span class="pill purple">root / prefix / suffix</span>
+          <p>Provides word-part information that can support morphology-focused vocabulary teaching.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-to-use">
+      <h2>How teachers can use it</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>1. Start from a topic or text</h3>
+          <p>Choose candidate words from the current unit, reading passage, or AI-generated instructional text.</p>
+        </div>
+        <div class="card">
+          <h3>2. Check teaching value</h3>
+          <p>Use HK frequency band, academic/subject list information, and textbook exposure to decide whether the word is worth attention.</p>
+        </div>
+        <div class="card">
+          <h3>3. Match learner level</h3>
+          <p>Use textbook first-seen grade and the external grade benchmark as reference points, not as fixed rules.</p>
+        </div>
+        <div class="card">
+          <h3>4. Plan instruction</h3>
+          <p>Use roots, prefixes, suffixes, and related evidence to support meaning-in-context, morphology, semantic links, and review.</p>
+        </div>
+      </div>
+
+      <p class="note">
+        Suggested use: treat the database as an evidence-informed planning support. Final decisions should still consider
+        the text, curriculum aim, student needs, and teacher judgement.
+      </p>
+    </section>
+
+    <section id="database">
+      <h2>Explore the database</h2>
+      <div class="upload-box">
+        <h3>Upload teacher-facing Excel file</h3>
+        <p>
+          Upload the latest file, for example <strong>HKELE_teacher_facing_v4.xlsx</strong>. The file is read locally in your browser.
+        </p>
+        <input type="file" id="excelFile" accept=".xlsx,.xls" />
+        <div class="status" id="uploadStatus">No file loaded yet.</div>
+      </div>
+
+      <div class="controls">
+        <input id="searchInput" type="text" placeholder="Search word, baseword, root, subject..." />
+        <select id="frequencyFilter">
+          <option value="">All HK frequency bands</option>
+        </select>
+        <select id="priorityFilter">
+          <option value="">All teaching priority signals</option>
+        </select>
+        <select id="benchmarkFilter">
+          <option value="">All external benchmarks</option>
+        </select>
+      </div>
+
+      <div class="status" id="tableStatus">Load an Excel file to view the database.</div>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="columns">
+      <h2>Column guide</h2>
+      <p>The exact columns may vary across versions. The following guide explains the main teacher-facing fields.</p>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Word</h3>
+          <p>The surface word form shown in the database.</p>
+        </div>
+        <div class="card">
+          <h3>Baseword</h3>
+          <p>The central base form used to group related word forms. Frequency ranking is based on Baseword rather than separate word forms.</p>
+        </div>
+        <div class="card">
+          <h3>HK_Frequency_Band</h3>
+          <p>Teacher-friendly frequency band based on Hong Kong English evidence, such as HK Top 1K, HK Top 2K, or Low frequency / review.</p>
+        </div>
+        <div class="card">
+          <h3>HK_Frequency_Rank_Baseword</h3>
+          <p>The rank of the Baseword in the Hong Kong English frequency list. Rank 1 means the most frequent Baseword.</p>
+        </div>
+        <div class="card">
+          <h3>HK_Frequency_Confidence</h3>
+          <p>Shows whether frequency evidence appears in both ICE-HK and GloWbE-HK, or only one of them.</p>
+        </div>
+        <div class="card">
+          <h3>External_Grade_Benchmark</h3>
+          <p>Readable version of VXGL, such as Grade 6–7. This is an external U.S. benchmark, not a Hong Kong grade level.</p>
+        </div>
+        <div class="card">
+          <h3>Recommended_Stage_Summary</h3>
+          <p>A compact summary of school-text exposure, such as first seen grade or transition-stage signal.</p>
+        </div>
+        <div class="card">
+          <h3>Subject_Relevance_Summary</h3>
+          <p>Summarises whether the word has domain relevance in local academic evidence, such as Science, Humanities, Social science, or Technology.</p>
+        </div>
+        <div class="card">
+          <h3>Academic_or_Subject_List_Summary</h3>
+          <p>Shows whether the word appears in academic or subject-related lists such as AWL or MSVL.</p>
+        </div>
+        <div class="card">
+          <h3>Teaching_Priority_Signal</h3>
+          <p>A compact signal combining evidence such as school exposure, content-bearing status, and domain relevance.</p>
+        </div>
+        <div class="card">
+          <h3>Greek_Latin_Root_1 / Meaning</h3>
+          <p>Useful for morphology instruction, especially when teaching academic words with classical roots.</p>
+        </div>
+        <div class="card">
+          <h3>Prefix_1 / Suffix_1</h3>
+          <p>Potentially useful word parts for helping students notice meaning and form relationships within word families.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="notes">
+      <h2>Important notes for interpretation</h2>
+      <ul>
+        <li><strong>Frequency is not the same as teaching priority.</strong> A frequent word may already be known; a lower-frequency word may be important for a specific unit.</li>
+        <li><strong>VXGL is external.</strong> It gives a U.S. grade-level benchmark and should not be treated as Hong Kong grade-level truth.</li>
+        <li><strong>Baseword ranking supports word-family teaching.</strong> Related forms are grouped under a central baseword to support morphology and generative vocabulary instruction.</li>
+        <li><strong>Teacher judgement remains central.</strong> Use the database together with curriculum goals, text demands, and knowledge of students.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    HK-ELE Teacher-facing Vocabulary Database · Prototype webpage for teacher planning and project demonstration
+  </footer>
+
+  <script>
+    let allRows = [];
+    let visibleColumns = [];
+
+    const preferredColumns = [
+      "Word",
+      "Baseword",
+      "HK_Frequency_Band",
+      "HK_Frequency_Rank_Baseword",
+      "HK_Frequency_Confidence",
+      "External_Grade_Benchmark",
+      "Recommended_Stage_Summary",
+      "Subject_Relevance_Summary",
+      "Academic_or_Subject_List_Summary",
+      "Teaching_Priority_Signal",
+      "hk_textbook_first_seen_grade",
+      "Greek_Latin_Root_1",
+      "Greek_Latin_Meaning_1",
+      "Prefix_1",
+      "Suffix_1"
+    ];
+
+    const excelInput = document.getElementById("excelFile");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const tableStatus = document.getElementById("tableStatus");
+    const searchInput = document.getElementById("searchInput");
+    const frequencyFilter = document.getElementById("frequencyFilter");
+    const priorityFilter = document.getElementById("priorityFilter");
+    const benchmarkFilter = document.getElementById("benchmarkFilter");
+
+    excelInput.addEventListener("change", handleExcelUpload);
+    searchInput.addEventListener("input", renderFilteredTable);
+    frequencyFilter.addEventListener("change", renderFilteredTable);
+    priorityFilter.addEventListener("change", renderFilteredTable);
+    benchmarkFilter.addEventListener("change", renderFilteredTable);
+
+    function handleExcelUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      uploadStatus.textContent = `Loading ${file.name}...`;
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        allRows = rows;
+        visibleColumns = chooseVisibleColumns(rows);
+        populateFilters(rows);
+        renderFilteredTable();
+        uploadStatus.textContent = `Loaded ${file.name}. Sheet: ${firstSheetName}. Rows: ${rows.length.toLocaleString()}.`;
+      };
+
+      reader.onerror = function() {
+        uploadStatus.textContent = "Could not read the file. Please check the Excel format.";
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function chooseVisibleColumns(rows) {
+      if (!rows.length) return [];
+      const columns = Object.keys(rows[0]);
+      const preferred = preferredColumns.filter(col => columns.includes(col));
+      return preferred.length ? preferred : columns.slice(0, 15);
+    }
+
+    function populateFilters(rows) {
+      setFilterOptions(frequencyFilter, rows, "HK_Frequency_Band", "All HK frequency bands");
+      setFilterOptions(priorityFilter, rows, "Teaching_Priority_Signal", "All teaching priority signals");
+      setFilterOptions(benchmarkFilter, rows, "External_Grade_Benchmark", "All external benchmarks");
+    }
+
+    function setFilterOptions(selectElement, rows, column, defaultText) {
+      const values = [...new Set(rows.map(row => row[column]).filter(value => String(value).trim() !== ""))].sort();
+      selectElement.innerHTML = `<option value="">${defaultText}</option>`;
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        selectElement.appendChild(option);
+      });
+    }
+
+    function renderFilteredTable() {
+      const query = searchInput.value.trim().toLowerCase();
+      const frequencyValue = frequencyFilter.value;
+      const priorityValue = priorityFilter.value;
+      const benchmarkValue = benchmarkFilter.value;
+
+      let filtered = allRows.filter(row => {
+        const matchesSearch = !query || Object.values(row).some(value => String(value).toLowerCase().includes(query));
+        const matchesFrequency = !frequencyValue || row["HK_Frequency_Band"] === frequencyValue;
+        const matchesPriority = !priorityValue || row["Teaching_Priority_Signal"] === priorityValue;
+        const matchesBenchmark = !benchmarkValue || row["External_Grade_Benchmark"] === benchmarkValue;
+        return matchesSearch && matchesFrequency && matchesPriority && matchesBenchmark;
+      });
+
+      const maxRowsToRender = 500;
+      const renderedRows = filtered.slice(0, maxRowsToRender);
+
+      renderTable(renderedRows);
+
+      if (!allRows.length) {
+        tableStatus.textContent = "Load an Excel file to view the database.";
+      } else {
+        tableStatus.textContent = `Showing ${renderedRows.length.toLocaleString()} of ${filtered.length.toLocaleString()} matching rows. For performance, the table displays up to ${maxRowsToRender} rows at once.`;
+      }
+    }
+
+    function renderTable(rows) {
+      const thead = document.querySelector("#dataTable thead");
+      const tbody = document.querySelector("#dataTable tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      if (!rows.length || !visibleColumns.length) return;
+
+      const headerRow = document.createElement("tr");
+      visibleColumns.forEach(column => {
+        const th = document.createElement("th");
+        th.textContent = column;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        visibleColumns.forEach(column => {
+          const td = document.createElement("td");
+          td.textContent = row[column] ?? "";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>
